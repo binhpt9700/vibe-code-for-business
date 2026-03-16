@@ -606,6 +606,9 @@
             // Clean up potential markdown formatting if AI disobeys
             htmlResponse = htmlResponse.replace(/```html/g, '').replace(/```/g, '').trim();
 
+            // Xử lý chuyển đổi Markdown in đậm (**) thành thẻ <strong> HTML
+            htmlResponse = htmlResponse.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
             // UI State: Success
             resultContent.innerHTML = htmlResponse;
             loadingDiv.classList.add('hidden');
