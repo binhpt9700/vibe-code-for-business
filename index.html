@@ -540,8 +540,9 @@
         const apiKey = "AIzaSyDPUR5Kl-6gsk-MOgujLMAG54EwV7V7uM0"; // ĐỂ TRỐNG "" KHI CHẠY PREVIEW TẠI ĐÂY. KHI ĐƯA LÊN VERCEL MỚI ĐIỀN KEY CỦA BẠN VÀO!
 
         async function callGeminiAPI(promptText) {
-            // Tự động chọn đúng Model: Nếu để trống key (chạy Preview) dùng model preview, nếu có key (chạy Vercel) dùng model public
-            const modelName = apiKey === "" ? "gemini-2.5-flash-preview-09-2025" : "gemini-2.5-flash";
+            // Sửa lỗi: Model public ổn định của Google AI Studio hiện tại là "gemini-1.5-flash". 
+            // Model 2.5 flash chỉ là bản preview nội bộ.
+            const modelName = apiKey === "" ? "gemini-2.5-flash-preview-09-2025" : "gemini-1.5-flash";
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
             
             const payload = {
@@ -565,15 +566,24 @@
                         body: JSON.stringify(payload)
                     });
                     
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    if (!response.ok) {
+                        // Bắt lỗi chi tiết từ Google nếu API Key sai, bị giới hạn hoặc tên model sai
+                        const errorData = await response.json();
+                        console.error("Chi tiết lỗi từ Google API:", errorData);
+                        throw new Error(`Lỗi ${response.status}: ${errorData.error?.message || 'Không xác định'}`);
+                    }
                     
                     const result = await response.json();
                     return result.candidates?.[0]?.content?.parts?.[0]?.text || "Không có nội dung trả về.";
                 } catch (error) {
-                    console.error("API Error:", error);
+                    console.error("API Error chi tiết:", error);
                     retries--;
                     if (retries === 0) {
-                        return "<p class='text-red-500 font-bold'>Đã có lỗi xảy ra khi kết nối với AI. Vui lòng thử lại sau.</p>";
+                        return `<div class='p-4 bg-red-50 border border-red-200 rounded-xl mt-4'>
+                                    <p class='text-red-600 font-bold flex items-center gap-2'><span class='material-symbols-outlined'>error</span>Lỗi Kết Nối AI</p>
+                                    <p class='text-red-500 text-sm mt-1'>${error.message}</p>
+                                    <p class='text-slate-600 text-sm mt-2'>Hãy chắc chắn rằng API Key của bạn hợp lệ và còn hạn mức sử dụng (Kiểm tra trong Google AI Studio).</p>
+                                </div>`;
                     }
                     await sleep(delay);
                     delay *= 2;
